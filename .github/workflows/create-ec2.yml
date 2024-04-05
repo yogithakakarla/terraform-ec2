@@ -1,0 +1,94 @@
+name: Create EC2 Instance
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'environment'
+        required: true
+        default: 'dev'
+      instanceName:
+        description: 'Name of the EC2 instance'
+        required: true
+      instanceCount:
+        description: 'No of instances'
+        required: true
+      awsRegion:
+        description: 'AWS region'
+        required: true
+        default: 'us-east-1'
+      instanceType:
+        description: 'EC2 instance type'
+        required: true
+        default: 't2.micro'
+      action:
+        description: 'TF action to apply/delete'
+        required: true
+        default: 'apply'
+
+  # push:
+  #   branches:
+  #     - main  # Trigger workflow on push to the main branch
+
+jobs:
+  terraform:
+    name: Provision EC2 Instance
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.action == 'apply' }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Terraform
+      uses: hashicorp/setup-terraform@v1
+      with:
+        terraform_version: 1.0.0  # Specify the Terraform version you want to use
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+        aws-region: us-east-1
+
+    - name: Terraform Init
+      run: terraform init
+
+    - name: Terraform Plan
+      run: terraform plan -var instance_name=${{ github.event.inputs.environment }}-${{ github.event.inputs.instanceName }} -var aws_region=${{ github.event.inputs.awsRegion }} -var instance_type=${{ github.event.inputs.instanceType }} -var instance_count=${{ github.event.inputs.instanceCount }}
+    
+    - name: Terraform Apply
+      run: terraform apply -auto-approve -var instance_name=${{ github.event.inputs.environment }}-${{ github.event.inputs.instanceName }} -var aws_region=${{ github.event.inputs.awsRegion }} -var instance_type=${{ github.event.inputs.instanceType }} -var instance_count=${{ github.event.inputs.instanceCount }}
+      
+  destroy_cluster:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.action == 'destroy' }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v1
+      with:
+        terraform_version: 1.0.0  # Specify the Terraform version you want to use
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+        aws-region: us-east-1
+        
+    - name: Terraform Init
+      run: terraform init
+
+    - name: Terraform FMT
+      run: terraform fmt
+
+    - name: Terraform Validate
+      run: terraform validate
+
+    - name: Terraform Destroy
+      run: terraform destroy -var instanceName=${{ github.event.inputs.instanceName }} -var awsRegion=${{ github.event.inputs.awsRegion }} -auto-approve
+ 

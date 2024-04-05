@@ -1,0 +1,10 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: terraform-ec2
+  annotations:
+    github.com/project-slug: yogithakakarla/terraform-ec2
+spec:
+  type: service
+  lifecycle: unknown
+  owner: infrastructure
